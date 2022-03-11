@@ -1,0 +1,30 @@
+version: '2'
+
+services:
+  mariadb:
+    image: docker.io/bitnami/mariadb:latest
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - MARIADB_USER=admin
+      - MARIADB_DATABASE=playsafedb
+
+  playsafe-app:
+    build: .
+    ports:
+      - '8000:8000'
+    environment:
+      - WAIT_HOSTS=mariadb:3306
+      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_SLEEP_INTERVAL=30
+      - WAIT_HOST_CONNECT_TIMEOUT=30
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USERNAME=admin
+      - DB_DATABASE=playsafedb
+    volumes:
+      - './playsafe:/app'
+      - './playsafe/storage/app/uploadedMedia:/media/input'
+      - './playsafe/storage/app/mediaContents:/media/output'
+    depends_on:
+      - mariadb
