@@ -32,9 +32,11 @@ Route::group([
     'prefix' => 'media'
 ], function ($router) {
     Route::post('/uploadAndPackage', [MediaController::class, 'uploadAndPackage']);
-    Route::post('/removeContent', [MediaController::class, 'removeContent']);
+    Route::post('/removeContent/{contentId}', [MediaController::class, 'removeContent']);
     Route::post('/editContentMetadata', [MediaController::class, 'editContentMetadata']);
-    Route::post('/getContentList', [MediaController::class, 'getContentList']);
-    Route::post('/getLicenseInfo', [MediaController::class, 'getLicenseInfo']);
-    Route::post('/getContentMetadata', [MediaController::class, 'getContentMetadata']);
+    Route::get('/getContentList/{country}', [MediaController::class, 'getContentList']);
+    Route::get('/getLicenseKey/{licenseId}', [MediaController::class, 'getLicenseKey']);
+    Route::post('/decryptContent/{contentId}', [MediaController::class, 'decryptContent']);
+    Route::get('/getProviderContentList', [MediaController::class, 'getProviderContentList']);
+    Route::get('/getMasterPlaylistUrl/{contentId}', [MediaController::class, 'getMasterPlaylistUrl']);
 });

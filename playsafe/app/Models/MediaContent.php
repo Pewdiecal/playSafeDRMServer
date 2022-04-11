@@ -12,5 +12,5 @@ class MediaContent extends Model
     protected $table = 'media_content_records';
     protected $primaryKey = 'content_id';
     public $timestamps = false;
-    protected $guarded = ['license_id'];
+    protected $guarded = [];
 }

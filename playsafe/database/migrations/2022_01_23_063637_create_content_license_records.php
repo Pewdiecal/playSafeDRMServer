@@ -15,11 +15,8 @@ class CreateContentLicenseRecords extends Migration
     {
         Schema::create('content_license_records', function (Blueprint $table) {
             $table->id('license_id');
-            $table->string('key_id');
-            $table->string('label');
-            $table->string('private_key');
-            $table->string('public_key');
-            $table->dateTime('validity_period');
+            $table->string('key_id')->nullable();
+            $table->dateTime('validity_period')->nullable();
         });
     }
 

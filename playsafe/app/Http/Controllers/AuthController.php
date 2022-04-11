@@ -48,7 +48,8 @@ class AuthController extends Controller
      */
     public function me()
     {
-        return response()->json(auth()->user());
+        $accountDetails = AccountDetails::where('account_id', auth()->user()->account_id);
+        return $accountDetails->first()->toJson();
     }
 
     public function register(Request $request) 
@@ -59,7 +60,8 @@ class AuthController extends Controller
             'username' => 'required',
             'password' => 'required',
             'registeredRegion' => 'required',
-            'maxStreamingQuality' => 'required'
+            'subscriptionType' => 'required',
+            'isContentProvider' => 'required'
         ]);
 
         if ($validation->fails()) {
@@ -68,9 +70,8 @@ class AuthController extends Controller
         
         if ($existingUser == null) {
             $accountDetails = AccountDetails::create([
-                'registered_region' => $request->input('registeredRegion'), 
-                'max_streaming_quality' => $request->input('maxStreamingQuality'), 
-                'subscribtion_status' => 'Active'
+                'registered_region' => $request->input('registeredRegion'),  
+                'subscribtion_status' => $request->input('subscriptionType')
             ]);
             
             $accountDetails->refresh();
@@ -78,7 +79,8 @@ class AuthController extends Controller
                 'username' => $request->input('username'),
                 'email' => $request->input('email'),
                 'password' => Hash::make($request->input('password')),
-                'account_id' => $accountDetails->account_id
+                'account_id' => $accountDetails->account_id,
+                'is_content_provider' => $request->input('isContentProvider')
             ]);
             
             return response()->json(['registrationStatus' => 'Success'], 200);

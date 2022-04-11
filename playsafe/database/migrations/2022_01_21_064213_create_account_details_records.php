@@ -16,7 +16,6 @@ class CreateAccountDetailsRecords extends Migration
         Schema::create('account_details_records', function (Blueprint $table) {
             $table->id('account_id');
             $table->string('registered_region');
-            $table->string('max_streaming_quality');
             $table->string('subscribtion_status');
             $table->integer('downloaded_content_qty');
             $table->float('total_streaming_hours');

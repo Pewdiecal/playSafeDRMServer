@@ -14,7 +14,7 @@ class User extends Authenticatable implements JWTSubject
     public $timestamps = false;
     protected $table = 'user_records';
     protected $primaryKey = 'user_id';
-    protected $fillable = ['username', 'email', 'password', 'account_id'];
+    protected $fillable = ['username', 'email', 'password', 'account_id', 'is_content_provider'];
     public function getJWTIdentifier() {
         return $this->getKey();
     }

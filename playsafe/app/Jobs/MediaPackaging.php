@@ -2,6 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\MediaContent;
+use App\Models\MediaLicense;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,9 +19,21 @@ class MediaPackaging implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    private $mediaContent;
     private $mediaInputPath;
     private $mediaOutputPath;
     private $dirName;
+    private $encryptMedia;
+    private $request;
+    private $covertArtInputPath;
+    private $covertArtOutputPath;
+    private $contentProviderId;
+    private $coverArtExt;
+    private $premiumMaxRes;
+    private $standardMaxRes;
+    private $basicMaxRes;
+    private $budgetMaxRes;
+    private $premiumTrialMaxRes;
     public $timeout = 0;
 
     /**
@@ -27,90 +41,170 @@ class MediaPackaging implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(string $mediaInputPath, string $mediaOutputPath, string $dirName)
+    public function __construct(array $request, string $covertArtInputPath, string $covertArtOutputPath, int $contentProviderId ,string $mediaInputPath, string $mediaOutputPath, string $dirName, string $coverArtExt)
     {
         $this->mediaInputPath = $mediaInputPath;
         $this->mediaOutputPath = $mediaOutputPath;
-        $this->dirName = "JcU76EHqybyDPdptEw2wmjhH542gOBUbinTXjyiv";
+        $this->dirName = $dirName;
+        $this->encryptMedia = $request['encryptMedia'];
+        $this->premiumMaxRes = $request['premiumMaxRes'];
+        $this->standardMaxRes = $request['standardMaxRes'];
+        $this->basicMaxRes = $request['basicMaxRes'];
+        $this->budgetMaxRes = $request['budgetMaxRes'];
+        $this->premiumTrialMaxRes = $request['premiumTrialMaxRes'];
+        $this->request = $request;
+        $this->covertArtInputPath = $covertArtInputPath;
+        $this->covertArtOutputPath = $covertArtOutputPath;
+        $this->contentProviderId = $contentProviderId;
+        $this->coverArtExt = $coverArtExt;
     }
-
-    private function keyID() {
-        $keyID = \substr(\bin2hex(Hash::make(Str::uuid()->toString())), rand(0, 27), 32);
-        return $keyID;
-    }
-
-    private function encKeyGen() {
-        // Generate AES-128-CBC key from 16 string char.
-        $randomStr = Str::random(4);
-        $randomInt = rand(100,999);
-        $currentSystemTime = \Carbon\Carbon::now()->toDateTimeString('second');
-        $rawStr = $randomStr.$randomInt.$currentSystemTime;
-        $hashStr = Hash::make($rawStr);
-        $privateKey = \substr(\bin2hex($hashStr), rand(0, 27), 32);
-        return $privateKey;
-    }
-
     /**
      * Execute the job.
      *
      * @return void
      */
+
+
+            // shell_exec("
+            // ffmpeg \
+            // -i /media/input/{$this->dirName}/{$this->dirName}.mp4 \
+            // -filter_complex \
+            // \"[0:v]split=2[v1][v5];\
+            // [v1]scale=w=640:h=360[v1out];\
+            // [v5]scale=w=640:h=360[v5out]\" \
+            // -map [v5out] -c:v:1 libx264  -profile:v:1 high -level:v:1 5.0 -x264-params scenecut=0:open_gop=0:min-keyint=72:keyint=72 -b:v:1 6000k \
+            // -map [v1out] -c:v:0 libx264  -profile:v:0 high -level:v:0 5.0 -x264-params scenecut=0:open_gop=0:min-keyint=72:keyint=72 -b:v:0 6000k \
+            // -map a:0 -c:a:0 aac -b:a:0 96k -ac 2 \
+            // -hls_time 1 \
+            // -hls_key_info_file \"/media/output/{$this->dirName}/enc.keyinfo\" \
+            // -hls_playlist_type vod \
+            // -hls_segment_filename /media/output/{$this->dirName}/stream_%v/data%02d.ts \
+            // -var_stream_map \"v:0,a:0 v:1,a:0\" stream_%v.m3u8 \
+            // -master_pl_name \"master.m3u8\" \
+            // /media/output/{$this->dirName}/{$this->dirName}.m3u8
+            // ");
+
     public function handle()
     {
-        $audioKeyID = $this->keyID();
-        $audioKey = $this->encKeyGen();
+        if ($this->encryptMedia == "true") {
+            $resolutions = array("144", "240", "360", "480", "720", "1080");
 
-        $sdKeyID = $this->keyID();
-        $sdKey = $this->encKeyGen();
+            $mediaLicense = new MediaLicense();
+            $mediaLicense->key_id = $this->dirName;
+            $mediaLicense->validity_period = now()->addDay(7);
+            $mediaLicense->save();
 
-        $hdKeyID = $this->keyID();
-        $hdKey = $this->encKeyGen();
+            $mediaContent = MediaContent::create([
+                'content_name' => $this->request['content_name'],
+                'directory_name' => $this->dirName,
+                'license_id' => $mediaLicense->license_id,
+                'content_description' => $this->request['content_description'],
+                'available_regions' => $this->request['available_region'],
+                'is_available_offline' => $this->request['is_available_offline'],
+                'content_cover_art_url' => "/publicStorage/{$this->dirName}/{$this->dirName}.{$this->coverArtExt}",
+                'content_provider_id' => $this->contentProviderId,
+                'genre' => $this->request['genre'],
+                'max_quality_premium' => $this->premiumMaxRes,
+                'max_quality_standard' => $this->standardMaxRes,
+                'max_quality_basic' => $this->basicMaxRes,
+                'max_quality_budget' => $this->budgetMaxRes,
+                'max_quality_premiumTrial' => $this->premiumTrialMaxRes
+            ]);
 
-        // input=/media/input/{$this->dirName}/{$this->dirName}_360p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_360p/'\$'Number'\$'.ts,drm_label=SD \
-        // input=/media/input/{$this->dirName}/{$this->dirName}_480p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_480p/'\$'Number'\$'.ts,drm_label=SD \
-        // input=/media/input/{$this->dirName}/{$this->dirName}_720p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_720p/'\$'Number'\$'.ts,drm_label=HD \
-        // input=/media/input/{$this->dirName}/{$this->dirName}_1080p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_1080p/'\$'Number'\$'.ts,drm_label=HD \
-        
-        // Execute shaka packager command.
-        // $result = shell_exec("
-        // packager \
-        // input=/media/input/{$this->dirName}/{$this->dirName}.mp4,stream=audio,segment_template=/media/output/{$this->dirName}/audio/'\$'Number'\$'.aac,drm_label=SD \
-        // input=/media/input/{$this->dirName}/{$this->dirName}.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_144p/'\$'Number'\$'.ts,drm_label=SD \
-        // --enable_raw_key_encryption \
-        // --keys label=AUDIO:key_id={$sdKeyID}:key={$sdKey},label=SD:key_id={$sdKeyID}:key={$sdKey} \
-        // --clear_lead 0 \
-        // --protection_scheme cbcs \
-        // --hls_master_playlist_output /media/output/{$this->dirName}/{$this->dirName}_master.m3u8
-        // ");
+            foreach ($resolutions as $resolution) {
+                $bitrate = "";
 
-        // shell_exec("echo \"{$sdKey}\" > /media/output/{$this->dirName}/key.bin");
+                switch ($resolution) {
+                    case "144":
+                        $mediaContent->master_playlist_url_144p = "/publicStorage/{$this->dirName}/{$resolution}/master.m3u8";
+                        $bitrate = "1M";
+                        break;
+                    case "240":
+                        $mediaContent->master_playlist_url_240p = "/publicStorage/{$this->dirName}/{$resolution}/master.m3u8";
+                        $bitrate = "1M";
+                        break;
+                    case "360":
+                        $mediaContent->master_playlist_url_360p = "/publicStorage/{$this->dirName}/{$resolution}/master.m3u8";
+                        $bitrate = "1M";
+                        break;
+                    case "480":
+                        $mediaContent->master_playlist_url_480p = "/publicStorage/{$this->dirName}/{$resolution}/master.m3u8";
+                        $bitrate = "2M";
+                        break;
+                    case "720":
+                        $mediaContent->master_playlist_url_720p = "/publicStorage/{$this->dirName}/{$resolution}/master.m3u8";
+                        $bitrate = "5M";
+                        break;
+                    case "1080":
+                        $mediaContent->master_playlist_url_1080p = "/publicStorage/{$this->dirName}/{$resolution}/master.m3u8";
+                        $bitrate = "8M";
+                        break;
+                }
 
-        // var_dump("audioKeyID: {$audioKeyID}");
-        // var_dump("audioKey: {$audioKey}");
+                shell_exec("mkdir /media/output/{$this->dirName}; mkdir /media/output/{$this->dirName}/{$resolution}");
+                shell_exec("openssl rand 16 > /media/output/{$this->dirName}/{$resolution}/{$this->dirName}_{$resolution}.key");
 
-        // var_dump("sdKeyID: {$sdKeyID}");
-        // var_dump("sdKey: {$sdKey}");
+                shell_exec("
+                echo \"{$this->dirName}_{$resolution}.key\" > /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo; \
+                echo \"/media/output/{$this->dirName}/{$resolution}/{$this->dirName}_{$resolution}.key\" >> /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo; \
+                openssl rand -hex 16 >> /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo
+                ");
 
-        shell_exec("mkdir /media/output/{$this->dirName}; mkdir /media/output/{$this->dirName}/h264_360p");
-        shell_exec("echo \"{$sdKey}\" > /media/output/{$this->dirName}/media.key");
+                $encodingResult = shell_exec("
+                ffmpeg -i /media/input/{$this->dirName}/{$this->dirName}.mp4 \
+                -vf \"scale=-2:{$resolution}\" \
+                -c:v libx264 -profile:v baseline -level:v 5.0 \
+                -x264-params scenecut=0:open_gop=0:min-keyint=72:keyint=72 \
+                -minrate {$bitrate} -maxrate {$bitrate} -bufsize {$bitrate} -b:v 600k \
+                -f hls \
+                -hls_time 2 \
+                -hls_key_info_file \"/media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo\" \
+                -hls_playlist_type vod \
+                -hls_segment_filename \"/media/output/{$this->dirName}/{$resolution}/h264_%d.ts\" \
+                /media/output/{$this->dirName}/{$resolution}/master.m3u8
+                ");
+            }
 
-        shell_exec("
-        echo \"http://localhost:8000/publicStorage/{$this->dirName}/media.key\" > /media/output/{$this->dirName}/enc.keyinfo; \
-        echo \"/media/output/{$this->dirName}/media.key\" >> /media/output/{$this->dirName}/enc.keyinfo; \
-        echo \"{$audioKey}\" >> /media/output/{$this->dirName}/enc.keyinfo
-        ");
+            $mediaContent->save();
+    
+            var_dump("MEDIA ENCRYPTED");
+            var_dump("TRANSMUX COMPLETED");
+        } else {
+            $result = shell_exec("
+            packager \
+            input=/media/input/{$this->dirName}/{$this->dirName}.mp4,stream=audio,segment_template=/media/output/{$this->dirName}/audio/'\$'Number'\$'.aac \
+            input=/media/input/{$this->dirName}/{$this->dirName}_144p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_144p/'\$'Number'\$'.ts \
+            input=/media/input/{$this->dirName}/{$this->dirName}_360p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_360p/'\$'Number'\$'.ts \
+            input=/media/input/{$this->dirName}/{$this->dirName}_480p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_480p/'\$'Number'\$'.ts \
+            input=/media/input/{$this->dirName}/{$this->dirName}_720p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_720p/'\$'Number'\$'.ts \
+            input=/media/input/{$this->dirName}/{$this->dirName}_1080p.mp4,stream=video,segment_template=/media/output/{$this->dirName}/h264_1080p/'\$'Number'\$'.ts \
+            --hls_master_playlist_output {$this->mediaOutputPath}/{$this->dirName}/{$this->dirName}_master.m3u8
+            ");
+            var_dump("TRANSMUX COMPLETED");
 
-        shell_exec("
-        ffmpeg -y \
-        -i /media/input/{$this->dirName}/{$this->dirName}_360p.mp4 \
-        -hls_time 2 \
-        -hls_key_info_file \"/media/output/{$this->dirName}/enc.keyinfo\" \
-        -hls_playlist_type vod \
-        -hls_segment_filename \"/media/output/{$this->dirName}/h264_360p/h264_360p_%d.ts\" \
-        /media/output/{$this->dirName}/{$this->dirName}_master.m3u8");
+            $mediaLicense = new MediaLicense();
+            $mediaLicense->key_id = null;
+            $mediaLicense->validity_period = null;
+            $mediaLicense->save();
 
-        var_dump("View at: http://localhost:8000/publicStorage/{$this->dirName}/{$this->dirName}_master.m3u8");
+            $mediaContent = MediaContent::create([
+                'content_name' => $this->request['content_name'],
+                'directory_name' => $this->dirName,
+                'license_id' => $mediaLicense->license_id,
+                'content_description' => $this->request['content_description'],
+                'available_regions' => $this->request['available_region'],
+                'is_available_offline' => $this->request['is_available_offline'],
+                'content_cover_art_url' => "/publicStorage/{$this->dirName}/{$this->dirName}.{$this->coverArtExt}",
+                'content_provider_id' => $this->contentProviderId,
+                'master_playlist_url' => "/publicStorage/{$this->dirName}/master.m3u8",
+                'genre' => $this->request['genre']
+            ]);
+        }
 
-        //Storage::disk('local')->deleteDirectory($this->dirName);
+        shell_exec("mv {$this->covertArtInputPath} {$this->covertArtOutputPath}/{$this->dirName}");
+
+        var_dump("View at: http://localhost:8000/publicStorage/{$this->dirName}/master.m3u8");
+
+        Storage::disk('local')->deleteDirectory($this->dirName);
     }
 }
