@@ -161,8 +161,9 @@ class MediaController extends Controller
         if ($user = auth()->user()) {
             $userAccountId = $user->account_id;
             $subscriptionType = AccountDetails::select('subscribtion_status')->where('account_id', $userAccountId)->first()->subscribtion_status;
-            $contentMaxStreamingQualityForSub = MediaContent::select("max_quality_".$subscriptionType)->where('content_id', $contentId)->first()->max_quality_basic;
-            $masterPlaylistUrl = MediaContent::select('master_playlist_url_'.$contentMaxStreamingQualityForSub)->where('content_id', $contentId)->first()->toJson();
+            $contentMaxStreamingQualityForSub = MediaContent::select("max_quality_".$subscriptionType)->where('content_id', $contentId)->first();
+            $MaxQuality = json_decode($contentMaxStreamingQualityForSub, true);
+            $masterPlaylistUrl = MediaContent::select("max_quality_".$subscriptionType, 'master_playlist_url_'.$MaxQuality["max_quality_".$subscriptionType])->where('content_id', $contentId)->first()->toJson();
             return $masterPlaylistUrl;
         } else {
             return response()->json(["error" => "Unauthorized"], 401);
