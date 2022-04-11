@@ -142,11 +142,11 @@ class MediaPackaging implements ShouldQueue
                 }
 
                 shell_exec("mkdir /media/output/{$this->dirName}; mkdir /media/output/{$this->dirName}/{$resolution}");
-                shell_exec("openssl rand 16 > /media/output/{$this->dirName}/{$resolution}/{$this->dirName}_{$resolution}.key");
+                shell_exec("openssl rand 16 > /media/keys/{$this->dirName}_{$resolution}.key");
 
                 shell_exec("
-                echo \"{$this->dirName}_{$resolution}.key\" > /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo; \
-                echo \"/media/output/{$this->dirName}/{$resolution}/{$this->dirName}_{$resolution}.key\" >> /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo; \
+                echo \"/api/media/getLicenseKey/{$this->dirName}_{$resolution}.key\" > /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo; \
+                echo \"/media/keys/{$this->dirName}_{$resolution}.key\" >> /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo; \
                 openssl rand -hex 16 >> /media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo
                 ");
 

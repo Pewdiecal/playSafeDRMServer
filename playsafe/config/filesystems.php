@@ -32,7 +32,7 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/uploadedMedia'),
+            'root' => storage_path('app/'),
         ],
 
         'public' => [

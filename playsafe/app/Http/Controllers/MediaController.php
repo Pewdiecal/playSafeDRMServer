@@ -170,8 +170,16 @@ class MediaController extends Controller
         }
     }
 
-    public function getLicenseKey(int $licenseId) {
-
+    public function getLicenseKey(string $keyPathname) {
+        if ($user = auth()->user()) {
+            if ($keyFile = Storage::disk('local')->get('keys/'.$keyPathname)) {
+                return $keyFile;
+            } else {
+                return response()->json(["error" => "Key not found"], 404);
+            }
+        } else {
+            return response()->json(["error" => "Unauthorized"], 401);
+        }
     }
 
     public function decryptContent(int $contentId) {

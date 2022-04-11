@@ -26,5 +26,6 @@ services:
       - './playsafe:/app'
       - './playsafe/storage/app/uploadedMedia:/media/input'
       - './playsafe/storage/app/mediaContents:/media/output'
+      - './playsafe/storage/app/keys:/media/keys'
     depends_on:
       - mariadb
