@@ -111,6 +111,9 @@ class MediaPackaging implements ShouldQueue
                 'max_quality_premiumTrial' => $this->premiumTrialMaxRes
             ]);
 
+            shell_exec("mkdir /media/output/{$this->dirName}");
+            shell_exec("mv {$this->covertArtInputPath} {$this->covertArtOutputPath}/{$this->dirName}");
+
             foreach ($resolutions as $resolution) {
                 $bitrate = "";
 
@@ -141,7 +144,7 @@ class MediaPackaging implements ShouldQueue
                         break;
                 }
 
-                shell_exec("mkdir /media/output/{$this->dirName}; mkdir /media/output/{$this->dirName}/{$resolution}");
+                shell_exec("mkdir /media/output/{$this->dirName}/{$resolution}");
                 shell_exec("openssl rand 16 > /media/keys/{$this->dirName}_{$resolution}.key");
 
                 shell_exec("
@@ -151,11 +154,11 @@ class MediaPackaging implements ShouldQueue
                 ");
 
                 $encodingResult = shell_exec("
-                ffmpeg -i /media/input/{$this->dirName}/{$this->dirName}.mp4 \
+                ffmpeg -i /media/input/{$this->dirName}/{$this->dirName}.mp4 -c:a copy \
                 -vf \"scale=-2:{$resolution}\" \
                 -c:v libx264 -profile:v baseline -level:v 5.0 \
                 -x264-params scenecut=0:open_gop=0:min-keyint=72:keyint=72 \
-                -minrate {$bitrate} -maxrate {$bitrate} -bufsize {$bitrate} -b:v 600k \
+                -minrate {$bitrate} -maxrate {$bitrate} -bufsize {$bitrate} -b:v {$bitrate} \
                 -f hls \
                 -hls_time 2 \
                 -hls_key_info_file \"/media/output/{$this->dirName}/{$resolution}/enc_{$resolution}.keyinfo\" \
@@ -170,6 +173,9 @@ class MediaPackaging implements ShouldQueue
             var_dump("MEDIA ENCRYPTED");
             var_dump("TRANSMUX COMPLETED");
         } else {
+            shell_exec("mv {$this->covertArtInputPath} {$this->covertArtOutputPath}/{$this->dirName}");
+            shell_exec("mkdir /media/output/{$this->dirName}");
+
             $result = shell_exec("
             packager \
             input=/media/input/{$this->dirName}/{$this->dirName}.mp4,stream=audio,segment_template=/media/output/{$this->dirName}/audio/'\$'Number'\$'.aac \
@@ -200,8 +206,6 @@ class MediaPackaging implements ShouldQueue
                 'genre' => $this->request['genre']
             ]);
         }
-
-        shell_exec("mv {$this->covertArtInputPath} {$this->covertArtOutputPath}/{$this->dirName}");
 
         var_dump("View at: http://localhost:8000/publicStorage/{$this->dirName}/master.m3u8");
 

@@ -102,23 +102,33 @@ class MediaController extends Controller
         if ($user = auth()->user()) {
             if ($user->is_content_provider) {
                 $validation = Validator::make($request->all(), [
-                    'contentId' => 'required',
-                    'contentName' => 'required',
-                    'rawMediaFile' => 'required',
-                    'coverArt' => 'required',
-                    'contentDescription' => 'required',
-                    'availableRegion' => 'required',
-                    'encryptMedia' => 'required',
-                    'premiumMaxRes' => 'required',
-                    'standardMaxRes' => 'required',
-                    'basicMaxRes' => 'required',
-                    'budgetMaxRes' => 'required',
-                    'premiumTrialMaxRes' => 'required'
+                    'content_id' => 'required',
+                    'content_name' => 'required',
+                    'genre' => 'required',
+                    'content_description' => 'required',
+                    'available_regions' => 'required',
+                    'max_quality_premium' => 'required',
+                    'max_quality_standard' => 'required',
+                    'max_quality_basic' => 'required',
+                    'max_quality_budget' => 'required',
+                    'max_quality_premiumTrial' => 'required'
                 ]);
 
                 if ($validation->fails()) {
                     return response()->json($validation->errors()->toArray(), 400);
                 }
+
+                $mediaContent = MediaContent::find($request->input('content_id'));
+                $mediaContent->content_name = $request->input('content_name');
+                $mediaContent->genre = $request->input('genre');
+                $mediaContent->available_regions = $request->input('available_regions');
+                $mediaContent->content_description = $request->input('content_description');
+                $mediaContent->max_quality_premium = $request->input('max_quality_premium');
+                $mediaContent->max_quality_standard = $request->input('max_quality_standard');
+                $mediaContent->max_quality_basic = $request->input('max_quality_basic');
+                $mediaContent->max_quality_budget = $request->input('max_quality_budget');
+                $mediaContent->max_quality_premiumTrial = $request->input('max_quality_premiumTrial');
+                $mediaContent->save();
             } else {
                 return response()->json(["error" => "Unauthorized"], 401);
             }
