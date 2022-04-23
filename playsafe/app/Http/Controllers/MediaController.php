@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Jobs\MediaEncoding;
 use App\Jobs\MediaPackaging;
+use App\Jobs\RotateKey;
 use App\Models\AccountDetails;
 use App\Models\MediaContent;
 use App\Models\MediaLicense;
@@ -87,6 +88,16 @@ class MediaController extends Controller
     public function removeContent(int $contentId) {
         if ($user = auth()->user()) {
             if ($user->is_content_provider) {
+                $dirNameToDelete = MediaContent::select('directory_name')->where('content_id', $contentId)->first()->directory_name;
+                Storage::disk('local')->deleteDirectory('mediaContents/'.$dirNameToDelete);
+                Storage::disk('local')->deleteDirectory('uploadedMedia/'.$dirNameToDelete);
+
+                // Delete all old keys for all resolutions.
+                $resolutions = array("144", "240", "360", "480", "720", "1080");
+                foreach ($resolutions as $resolution) {
+                    Storage::disk('local')->delete('keys/'.$dirNameToDelete.'_{$resolution}.key');
+                }
+
                 $licenseId = MediaContent::where('content_id', $contentId)->first()->license_id;
                 MediaContent::destroy($contentId);
                 MediaLicense::destroy($licenseId);
@@ -158,6 +169,7 @@ class MediaController extends Controller
             $contents = MediaContent::select(
                 'content_id', 
                 'content_name', 
+                'license_id',
                 'genre', 
                 'content_description', 
                 'content_cover_art_url')->where('available_regions', $country)->get()->toJson();    
@@ -192,22 +204,25 @@ class MediaController extends Controller
         }
     }
 
-    public function decryptContent(int $contentId) {
-        // if ($user = auth()->user()) {
-        //     if ($user->is_content_provider) {
-        //         $mediaContent = MediaContent::where('content_id', $contentId);
+    public function rotateKey(int $contentId) {
+        if ($content = MediaContent::select('directory_name')->where('content_id', $contentId)->first()) {
+            $dirNameToDelete = $content->directory_name;
 
-        //         MediaLicense::destroy($mediaContent->license_id);
+            // Delete all old keys for all resolutions.
+            $resolutions = array("144", "240", "360", "480", "720", "1080");
+            foreach ($resolutions as $resolution) {
+                Storage::disk('local')->delete('keys/'.$dirNameToDelete.'_{$resolution}.key');
 
-        //         $contentDirPath = '/media/output/'.$mediaContent->directory_name;
-                
-        //     } else {
-        //         return response()->json(["error" => "Unauthorized"], 401);
-        //     }
-        // } else {
-        //     return response()->json(["error" => "Unauthorized"], 401);
-        // }
+                 // Delete existing transmuxed file.
+                Storage::disk('local')->deleteDirectory('mediaContents/'.$dirNameToDelete.'/'.$resolution);
+            }
 
-        return response()->json(["Decryption Status:" => "Completed"], 200);
+            // Dispatch key rotation job to queue.
+            RotateKey::dispatch($contentId);
+
+            return response()->json(["status" => "Key rotation request success."], 200);
+        }
+
+        return response()->json(["error" => "Content id not found"], 404);
     }
 }

@@ -36,7 +36,7 @@ Route::group([
     Route::post('/editContentMetadata', [MediaController::class, 'editContentMetadata']);
     Route::get('/getContentList/{country}', [MediaController::class, 'getContentList']);
     Route::get('/getLicenseKey/{keyPathname}', [MediaController::class, 'getLicenseKey']);
-    Route::post('/decryptContent/{contentId}', [MediaController::class, 'decryptContent']);
+    Route::post('/rotateKey/{contentId}', [MediaController::class, 'rotateKey']);
     Route::get('/getProviderContentList', [MediaController::class, 'getProviderContentList']);
     Route::get('/getMasterPlaylistUrl/{contentId}', [MediaController::class, 'getMasterPlaylistUrl']);
 });

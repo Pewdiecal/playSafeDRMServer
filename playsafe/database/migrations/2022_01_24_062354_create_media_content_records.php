@@ -18,7 +18,7 @@ class CreateMediaContentRecords extends Migration
             $table->string('content_name');
             $table->string('genre');
             $table->string('directory_name');
-            $table->unsignedBigInteger('license_id');
+            $table->unsignedBigInteger('license_id')->nullable();
             $table->string('content_description');
             $table->string('available_regions');
             $table->boolean('is_available_offline');
