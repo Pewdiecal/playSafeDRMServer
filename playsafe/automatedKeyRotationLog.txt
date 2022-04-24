@@ -1,0 +1,7 @@
+object(Illuminate\Database\Eloquent\Collection)#915 (2) {
+  ["items":protected]=>
+  array(0) {
+  }
+  ["escapeWhenCastingToString":protected]=>
+  bool(false)
+}
